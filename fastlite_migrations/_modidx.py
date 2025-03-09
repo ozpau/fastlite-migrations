@@ -19,4 +19,5 @@ d = { 'settings': { 'branch': 'main',
                                           'fastlite_migrations.core.Migrator.migrate': ( 'core.html#migrator.migrate',
                                                                                          'fastlite_migrations/core.py'),
                                           'fastlite_migrations.core.Migrator.rollback': ( 'core.html#migrator.rollback',
-                                                                                          'fastlite_migrations/core.py')}}}
+                                                                                          'fastlite_migrations/core.py'),
+                                          'fastlite_migrations.core.database': ('core.html#database', 'fastlite_migrations/core.py')}}}

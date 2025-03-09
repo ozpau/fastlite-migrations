@@ -42,22 +42,18 @@ db = database(":memory:")
 ```
 
 ``` python
-m = Migrator(db)
-```
-
-``` python
-@m.add_migration(0)
+@db.add_migration(0)
 def initial_db(db): db.q("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT)")
 
-@m.add_migration(1)
+@db.add_migration(1)
 def add_cats(db): db.q("CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT)")
 
-@m.add_migration(2)
+@db.add_migration(2)
 def add_cat_hats_prop(db): db.q("ALTER TABLE cats ADD COLUMN hats TEXT")
 ```
 
 ``` python
-m.migrate()
+db.migrate()
 ```
 
     0 initial_db
@@ -88,7 +84,7 @@ for i in range(100):
 L(cats())
 ```
 
-    (#100) [Cats(id=0, hats='Party Hat'),Cats(id=1, hats='Sailor Hat'),Cats(id=2, hats='Crown'),Cats(id=3, hats='Top Hat'),Cats(id=4, hats='Bunny Ears'),Cats(id=5, hats='Feathered Hat'),Cats(id=6, hats='Sun Hat'),Cats(id=7, hats='Crown'),Cats(id=8, hats='Pirate Hat'),Cats(id=9, hats='Headband with Flowers'),Cats(id=10, hats='Bunny Ears'),Cats(id=11, hats='Feathered Hat'),Cats(id=12, hats='Pirate Hat'),Cats(id=13, hats='Chef Hat'),Cats(id=14, hats='Chef Hat'),Cats(id=15, hats='Headband with Flowers'),Cats(id=16, hats='Cowboy Hat'),Cats(id=17, hats='Cowboy Hat'),Cats(id=18, hats='Sun Hat'),Cats(id=19, hats='Pirate Hat')...]
+    (#100) [Cats(id=0, hats='Sun Hat'),Cats(id=1, hats='Baseball Cap'),Cats(id=2, hats='Baseball Cap'),Cats(id=3, hats='Sun Hat'),Cats(id=4, hats='Feathered Hat'),Cats(id=5, hats='Sailor Hat'),Cats(id=6, hats='Bunny Ears'),Cats(id=7, hats='Wizard Hat'),Cats(id=8, hats='Cowboy Hat'),Cats(id=9, hats='Sailor Hat'),Cats(id=10, hats='Crown'),Cats(id=11, hats='Top Hat'),Cats(id=12, hats='Sun Hat'),Cats(id=13, hats='Bunny Ears'),Cats(id=14, hats='Beanie'),Cats(id=15, hats='Cowboy Hat'),Cats(id=16, hats='Pirate Hat'),Cats(id=17, hats='Beanie'),Cats(id=18, hats='Top Hat'),Cats(id=19, hats='Sailor Hat')...]
 
 What if we now decide we want to store hat names in a separate table?
 
@@ -103,7 +99,7 @@ hat_prices = [15.99, 10.50, 20.00, 25.00, 8.99, 18.50, 12.00, 5.99, 7.50, 14.99,
 ```
 
 ``` python
-@m.add_migration(3)
+@db.add_migration(3)
 def add_hats_table(db):
     db.q("""
 CREATE TABLE hats (
@@ -121,18 +117,18 @@ to try running migration, and then cancelling it using the rollback
 function below:
 
 ``` python
-@m.add_rollback(3)
+@db.add_rollback(3)
 def delete_hats_table(db): db.q("DROP TABLE hats")
 ```
 
 ``` python
-m.migrate()
+db.migrate()
 ```
 
     3 add_hats_table
 
 ``` python
-m.rollback()
+db.rollback_migration()
 ```
 
     3 delete_hats_table
@@ -140,21 +136,24 @@ m.rollback()
 Let’s finish writing the migration:
 
 ``` python
-data = list(map(lambda x: dict(zip(['name_en', 'name_fr', 'name_zh', 'price'], x)), zip(hat_types, hat_types_fr, hat_types_zh, hat_prices)))
+data = list(map(lambda x: dict(zip(['id', 'name_en', 'name_fr', 'name_zh', 'price'], x)),
+                zip(range(len(hat_types)), hat_types, hat_types_fr, hat_types_zh, hat_prices)))
 data[:2]
 ```
 
-    [{'name_en': 'Top Hat',
+    [{'id': 0,
+      'name_en': 'Top Hat',
       'name_fr': 'Chapeau haut de forme',
       'name_zh': '高顶帽',
       'price': 15.99},
-     {'name_en': 'Baseball Cap',
+     {'id': 1,
+      'name_en': 'Baseball Cap',
       'name_fr': 'Casquette de baseball',
       'name_zh': '棒球帽',
       'price': 10.5}]
 
 ``` python
-@m.add_migration(3)
+@db.add_migration(3)
 def add_hats_table(db):
     db.q("""
 CREATE TABLE hats (
@@ -170,105 +169,206 @@ CREATE TABLE hats (
 ```
 
 ``` python
-m.rollback()
+db.rollback_migration()
 ```
 
-    3 delete_hats_table
+    No rollback for the latest applied migration found: Migrations(id=2, name='add_cat_hats_prop', inserted_at='2025-03-09 18:56:25')
 
 ``` python
-m.migrate()
+db.migrate()
 ```
 
     3 add_hats_table
 
 ``` python
-db.rollback?
+db.t.hats()[:2]
 ```
 
-    Signature: db.rollback()
-    Docstring: Roll back a transaction
-    File:      ~/nbdev/contrib/apswutils/apswutils/db.py
-    Type:      method
-
-``` python
-db.t.hats()
-```
-
-    [{'id': 1,
+    [{'id': 0,
       'name_en': 'Top Hat',
       'name_fr': 'Chapeau haut de forme',
       'name_zh': '高顶帽',
       'price': 15.99},
-     {'id': 2,
+     {'id': 1,
       'name_en': 'Baseball Cap',
       'name_fr': 'Casquette de baseball',
       'name_zh': '棒球帽',
-      'price': 10.5},
-     {'id': 3,
-      'name_en': 'Cowboy Hat',
-      'name_fr': 'Chapeau de cowboy',
-      'name_zh': '牛仔帽',
-      'price': 20},
-     {'id': 4,
-      'name_en': 'Wizard Hat',
-      'name_fr': 'Chapeau de sorcier',
-      'name_zh': '巫师帽',
-      'price': 25},
-     {'id': 5,
-      'name_en': 'Beanie',
-      'name_fr': 'Bonnet',
-      'name_zh': '毛线帽',
-      'price': 8.99},
-     {'id': 6,
-      'name_en': 'Pirate Hat',
-      'name_fr': 'Chapeau de pirate',
-      'name_zh': '海盗帽',
-      'price': 18.5},
-     {'id': 7,
-      'name_en': 'Sun Hat',
-      'name_fr': 'Chapeau de soleil',
-      'name_zh': '太阳帽',
-      'price': 12},
-     {'id': 8,
-      'name_en': 'Party Hat',
-      'name_fr': 'Chapeau de fête',
-      'name_zh': '派对帽',
-      'price': 5.99},
-     {'id': 9,
-      'name_en': 'Bunny Ears',
-      'name_fr': 'Oreilles de lapin',
-      'name_zh': '兔耳朵',
-      'price': 7.5},
-     {'id': 10,
-      'name_en': 'Chef Hat',
-      'name_fr': 'Chapeau de chef',
-      'name_zh': '厨师帽',
-      'price': 14.99},
-     {'id': 11,
-      'name_en': 'Hard Hat',
-      'name_fr': 'Casque de chantier',
-      'name_zh': '安全帽',
-      'price': 22},
-     {'id': 12,
-      'name_en': 'Feathered Hat',
-      'name_fr': 'Chapeau à plumes',
-      'name_zh': '羽毛帽',
-      'price': 16.75},
-     {'id': 13,
-      'name_en': 'Crown',
-      'name_fr': 'Couronne',
-      'name_zh': '王冠',
-      'price': 30},
-     {'id': 14,
-      'name_en': 'Sailor Hat',
-      'name_fr': 'Chapeau de marin',
-      'name_zh': '水手帽',
-      'price': 11.5},
-     {'id': 15,
-      'name_en': 'Headband with Flowers',
-      'name_fr': 'Bandeau avec des fleurs',
-      'name_zh': '花头带',
-      'price': 9.99}]
+      'price': 10.5}]
+
+Now that we have a table of hats, let’s connect table of cats to it.
+
+``` python
+db.t.cats()[:2]
+```
+
+    [Cats(id=0, hats='Sun Hat'), Cats(id=1, hats='Baseball Cap')]
+
+Let’s write a migration to change `hats` column to a foreign key that
+points to `hats` table. We can do this in one transaction.
+
+``` python
+db.rollback_migration()
+```
+
+    3 delete_hats_table
+
+``` python
+@db.add_migration(3)
+def add_hats_table(db):
+    db.q("""
+CREATE TABLE hats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name_en TEXT NOT NULL,
+    name_fr TEXT NOT NULL,
+    name_zh TEXT NOT NULL,
+    price INTEGER NOT NULL
+)
+    """)
+
+    db.t.hats.insert_all(data)
+
+    db.q("""
+ALTER TABLE cats ADD COLUMN hat_id INTEGER;
+UPDATE cats SET hat_id = (SELECT id FROM hats WHERE hats.name_en = cats.hats);
+    """)
+```
+
+``` python
+@db.add_rollback(3)
+def delete_hats_table(db):
+    db.q("""
+    ALTER TABLE cats DROP COLUMN hat_id;
+    DROP TABLE hats;
+    """)
+```
+
+``` python
+db.migrate()
+```
+
+    3 add_hats_table
+
+We added a column, so we need to recreate `Cat` class:
+
+``` python
+Cat = db.t.cats.dataclass()
+```
+
+As you can see, at this point we have `hat_id`s set properly:
+
+``` python
+list(zip(db.t.cats(), map(lambda x: hat_types[x.hat_id], db.t.cats())))[:2]
+```
+
+    [(Cats(id=0, hats='Sun Hat', hat_id=6), 'Sun Hat'),
+     (Cats(id=1, hats='Baseball Cap', hat_id=1), 'Baseball Cap')]
+
+If we are planning to execute this migration in production, and we
+require zero downtime, you’d need to do some extra work with the
+controller side of your application.
+
+But if downtime is ok, we can just update our code to use `hat_id`
+instead of `hats`, and apply the migration.
+
+Now let’s add foreign key constraint.
+
+There is a slight issue with foreign key constraint: SQLite doesn’t
+allow modifying foreign key constraints after the table is created. So
+if we need to change these, we have to create a new table from scratch
+and copy all the data.
+
+For more info on the issue, see
+https://www.sqlite.org/lang_altertable.html#otheralter
+
+Following the guide, let’s first obtain sql to create original table:
+
+``` python
+db.q("""
+ SELECT type, sql FROM sqlite_schema WHERE tbl_name='cats'
+""")
+```
+
+    [{'type': 'table',
+      'sql': 'CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, hats TEXT, hat_id INTEGER)'}]
+
+``` python
+@db.add_migration(3)
+def add_hats_table(db):
+    db.q("""
+CREATE TABLE hats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name_en TEXT NOT NULL,
+    name_fr TEXT NOT NULL,
+    name_zh TEXT NOT NULL,
+    price INTEGER NOT NULL
+)
+    """)
+
+    db.t.hats.insert_all(data)
+
+    db.q("""
+ALTER TABLE cats ADD COLUMN hat_id INTEGER;
+UPDATE cats SET hat_id = (SELECT id FROM hats WHERE hats.name_en = cats.hats);
+
+CREATE TABLE cats_new (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hat_id INTEGER,
+    FOREIGN KEY (hat_id) REFERENCES hats(id)
+);
+INSERT INTO cats_new SELECT id, hat_id FROM cats;
+DROP TABLE cats;
+ALTER TABLE cats_new RENAME TO cats;
+    """)
+```
+
+``` python
+db.rollback_migration()
+```
+
+    3 delete_hats_table
+
+``` python
+db.migrate()
+```
+
+    3 add_hats_table
+
+``` python
+db.t
+```
+
+    cats, hats, migrations, users
+
+Great! Finally we have moved hats from cats!
+
+``` python
+diagram(db.tables)
+```
+
+![](index_files/figure-commonmark/cell-33-output-1.svg)
+
+``` python
+cats, hats = db.t.cats, db.t.hats
+Cat, Hat = cats.dataclass(), hats.dataclass()
+```
+
+``` python
+cats()[:2], hats()[:2]
+```
+
+    ([Cats(id=0, hat_id=6), Cats(id=1, hat_id=1)],
+     [Hats(id=0, name_en='Top Hat', name_fr='Chapeau haut de forme', name_zh='高顶帽', price=15.99),
+      Hats(id=1, name_en='Baseball Cap', name_fr='Casquette de baseball', name_zh='棒球帽', price=10.5)])
+
+Now each cat doesn’t have all information about its head stored inside
+it, but we can run a query to retrieve this information as needed:
+
+``` python
+db.q("SELECT cats.*, hats.name_en hat_name, hats.price hat_price FROM cats JOIN hats")[:2]
+```
+
+    [{'id': 0, 'hat_id': 6, 'hat_name': 'Top Hat', 'hat_price': 15.99},
+     {'id': 0, 'hat_id': 6, 'hat_name': 'Baseball Cap', 'hat_price': 10.5}]
 
 ## Developer Guide
 
