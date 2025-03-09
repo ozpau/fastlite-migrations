@@ -1,0 +1,62 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "fastlite-migrations",
+    "section": "",
+    "text": "Manage your database migrations with ease.",
+    "crumbs": [
+      "fastlite-migrations"
+    ]
+  },
+  {
+    "objectID": "index.html#usage",
+    "href": "index.html#usage",
+    "title": "fastlite-migrations",
+    "section": "Usage",
+    "text": "Usage\n\nInstallation\nInstall from pypi:\n$ pip install fastlite_migrations\nOr install latest from the GitHub repository:\n$ pip install git+https://github.com/ozpau/fastlite-migrations.git\n\n\nDocumentation\nDocumentation can be found hosted on this GitHub repository’s pages. Additionally you can find package manager specific guidelines on pypi.",
+    "crumbs": [
+      "fastlite-migrations"
+    ]
+  },
+  {
+    "objectID": "index.html#how-to-use",
+    "href": "index.html#how-to-use",
+    "title": "fastlite-migrations",
+    "section": "How to use",
+    "text": "How to use\n\nfrom fastlite import *\nfrom fastlite_migrations import *\n\n\ndb = database(\":memory:\")\n\n\n@db.add_migration(0)\ndef initial_db(db): db.q(\"CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT)\")\n\n@db.add_migration(1)\ndef add_cats(db): db.q(\"CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT)\")\n\n@db.add_migration(2)\ndef add_cat_hats_prop(db): db.q(\"ALTER TABLE cats ADD COLUMN hats TEXT\")\n\n\ndb.migrate()\n\n0 initial_db\n1 add_cats\n2 add_cat_hats_prop\n\n\n\ncats = db.t.cats\nCat = cats.dataclass()\n\n\nhat_types = [\"Top Hat\", \"Baseball Cap\", \"Cowboy Hat\", \"Wizard Hat\", \"Beanie\", \"Pirate Hat\",\n             \"Sun Hat\", \"Party Hat\", \"Bunny Ears\", \"Chef Hat\", \"Hard Hat\", \"Feathered Hat\",\n             \"Crown\", \"Sailor Hat\", \"Headband with Flowers\"]\n\n\nimport random\n\n\nfor i in range(100):\n    cats.insert(Cat(i, random.choice(hat_types)))\n\n\nL(cats())\n\n(#100) [Cats(id=0, hats='Sun Hat'),Cats(id=1, hats='Baseball Cap'),Cats(id=2, hats='Baseball Cap'),Cats(id=3, hats='Sun Hat'),Cats(id=4, hats='Feathered Hat'),Cats(id=5, hats='Sailor Hat'),Cats(id=6, hats='Bunny Ears'),Cats(id=7, hats='Wizard Hat'),Cats(id=8, hats='Cowboy Hat'),Cats(id=9, hats='Sailor Hat'),Cats(id=10, hats='Crown'),Cats(id=11, hats='Top Hat'),Cats(id=12, hats='Sun Hat'),Cats(id=13, hats='Bunny Ears'),Cats(id=14, hats='Beanie'),Cats(id=15, hats='Cowboy Hat'),Cats(id=16, hats='Pirate Hat'),Cats(id=17, hats='Beanie'),Cats(id=18, hats='Top Hat'),Cats(id=19, hats='Sailor Hat')...]\n\n\nWhat if we now decide we want to store hat names in a separate table?\n\nhat_types_zh = [\"高顶帽\", \"棒球帽\", \"牛仔帽\", \"巫师帽\", \"毛线帽\", \"海盗帽\", \"太阳帽\", \"派对帽\",\n                \"兔耳朵\", \"厨师帽\", \"安全帽\", \"羽毛帽\", \"王冠\", \"水手帽\", \"花头带\"]\nhat_types_fr = [\"Chapeau haut de forme\", \"Casquette de baseball\", \"Chapeau de cowboy\",\n                \"Chapeau de sorcier\", \"Bonnet\", \"Chapeau de pirate\", \"Chapeau de soleil\",\n                \"Chapeau de fête\", \"Oreilles de lapin\", \"Chapeau de chef\", \"Casque de chantier\",\n                \"Chapeau à plumes\", \"Couronne\", \"Chapeau de marin\", \"Bandeau avec des fleurs\"]\nhat_prices = [15.99, 10.50, 20.00, 25.00, 8.99, 18.50, 12.00, 5.99, 7.50, 14.99, 22.00, 16.75, 30.00, 11.50, 9.99]\n\n\n@db.add_migration(3)\ndef add_hats_table(db):\n    db.q(\"\"\"\nCREATE TABLE hats (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    name_en TEXT NOT NULL,\n    name_fr TEXT NOT NULL,\n    name_zh TEXT NOT NULL,\n    price INTEGER NOT NULL\n)\n    \"\"\")\n\nWhile you work on writing the function above, you can find it convenient to try running migration, and then cancelling it using the rollback function below:\n\n@db.add_rollback(3)\ndef delete_hats_table(db): db.q(\"DROP TABLE hats\")\n\n\ndb.migrate()\n\n3 add_hats_table\n\n\n\ndb.rollback_migration()\n\n3 delete_hats_table\n\n\nLet’s finish writing the migration:\n\ndata = list(map(lambda x: dict(zip(['id', 'name_en', 'name_fr', 'name_zh', 'price'], x)),\n                zip(range(len(hat_types)), hat_types, hat_types_fr, hat_types_zh, hat_prices)))\ndata[:2]\n\n[{'id': 0,\n  'name_en': 'Top Hat',\n  'name_fr': 'Chapeau haut de forme',\n  'name_zh': '高顶帽',\n  'price': 15.99},\n {'id': 1,\n  'name_en': 'Baseball Cap',\n  'name_fr': 'Casquette de baseball',\n  'name_zh': '棒球帽',\n  'price': 10.5}]\n\n\n\n@db.add_migration(3)\ndef add_hats_table(db):\n    db.q(\"\"\"\nCREATE TABLE hats (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    name_en TEXT NOT NULL,\n    name_fr TEXT NOT NULL,\n    name_zh TEXT NOT NULL,\n    price INTEGER NOT NULL\n)\n    \"\"\")\n\n    db.t.hats.insert_all(data)\n\n\ndb.rollback_migration()\n\nNo rollback for the latest applied migration found: Migrations(id=2, name='add_cat_hats_prop', inserted_at='2025-03-09 18:56:25')\n\n\n\ndb.migrate()\n\n3 add_hats_table\n\n\n\ndb.t.hats()[:2]\n\n[{'id': 0,\n  'name_en': 'Top Hat',\n  'name_fr': 'Chapeau haut de forme',\n  'name_zh': '高顶帽',\n  'price': 15.99},\n {'id': 1,\n  'name_en': 'Baseball Cap',\n  'name_fr': 'Casquette de baseball',\n  'name_zh': '棒球帽',\n  'price': 10.5}]\n\n\nNow that we have a table of hats, let’s connect table of cats to it.\n\ndb.t.cats()[:2]\n\n[Cats(id=0, hats='Sun Hat'), Cats(id=1, hats='Baseball Cap')]\n\n\nLet’s write a migration to change hats column to a foreign key that points to hats table. We can do this in one transaction.\n\ndb.rollback_migration()\n\n3 delete_hats_table\n\n\n\n@db.add_migration(3)\ndef add_hats_table(db):\n    db.q(\"\"\"\nCREATE TABLE hats (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    name_en TEXT NOT NULL,\n    name_fr TEXT NOT NULL,\n    name_zh TEXT NOT NULL,\n    price INTEGER NOT NULL\n)\n    \"\"\")\n\n    db.t.hats.insert_all(data)\n\n    db.q(\"\"\"\nALTER TABLE cats ADD COLUMN hat_id INTEGER;\nUPDATE cats SET hat_id = (SELECT id FROM hats WHERE hats.name_en = cats.hats);\n    \"\"\")\n\n\n@db.add_rollback(3)\ndef delete_hats_table(db):\n    db.q(\"\"\"\n    ALTER TABLE cats DROP COLUMN hat_id;\n    DROP TABLE hats;\n    \"\"\")\n\n\ndb.migrate()\n\n3 add_hats_table\n\n\nWe added a column, so we need to recreate Cat class:\n\nCat = db.t.cats.dataclass()\n\nAs you can see, at this point we have hat_ids set properly:\n\nlist(zip(db.t.cats(), map(lambda x: hat_types[x.hat_id], db.t.cats())))[:2]\n\n[(Cats(id=0, hats='Sun Hat', hat_id=6), 'Sun Hat'),\n (Cats(id=1, hats='Baseball Cap', hat_id=1), 'Baseball Cap')]\n\n\nIf we are planning to execute this migration in production, and we require zero downtime, you’d need to do some extra work with the controller side of your application.\nBut if downtime is ok, we can just update our code to use hat_id instead of hats, and apply the migration.\nNow let’s add foreign key constraint.\nThere is a slight issue with foreign key constraint: SQLite doesn’t allow modifying foreign key constraints after the table is created. So if we need to change these, we have to create a new table from scratch and copy all the data.\nFor more info on the issue, see https://www.sqlite.org/lang_altertable.html#otheralter\nFollowing the guide, let’s first obtain sql to create original table:\n\ndb.q(\"\"\"\n SELECT type, sql FROM sqlite_schema WHERE tbl_name='cats'\n\"\"\")\n\n[{'type': 'table',\n  'sql': 'CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, hats TEXT, hat_id INTEGER)'}]\n\n\n\n@db.add_migration(3)\ndef add_hats_table(db):\n    db.q(\"\"\"\nCREATE TABLE hats (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    name_en TEXT NOT NULL,\n    name_fr TEXT NOT NULL,\n    name_zh TEXT NOT NULL,\n    price INTEGER NOT NULL\n)\n    \"\"\")\n\n    db.t.hats.insert_all(data)\n\n    db.q(\"\"\"\nALTER TABLE cats ADD COLUMN hat_id INTEGER;\nUPDATE cats SET hat_id = (SELECT id FROM hats WHERE hats.name_en = cats.hats);\n\nCREATE TABLE cats_new (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    hat_id INTEGER,\n    FOREIGN KEY (hat_id) REFERENCES hats(id)\n);\nINSERT INTO cats_new SELECT id, hat_id FROM cats;\nDROP TABLE cats;\nALTER TABLE cats_new RENAME TO cats;\n    \"\"\")\n\n\ndb.rollback_migration()\n\n3 delete_hats_table\n\n\n\ndb.migrate()\n\n3 add_hats_table\n\n\n\ndb.t\n\ncats, hats, migrations, users\n\n\nGreat! Finally we have moved hats from cats!\n\ndiagram(db.tables)\n\n\n\n\n\n\n\n\n\ncats, hats = db.t.cats, db.t.hats\nCat, Hat = cats.dataclass(), hats.dataclass()\n\n\ncats()[:2], hats()[:2]\n\n([Cats(id=0, hat_id=6), Cats(id=1, hat_id=1)],\n [Hats(id=0, name_en='Top Hat', name_fr='Chapeau haut de forme', name_zh='高顶帽', price=15.99),\n  Hats(id=1, name_en='Baseball Cap', name_fr='Casquette de baseball', name_zh='棒球帽', price=10.5)])\n\n\nNow each cat doesn’t have all information about its head stored inside it, but we can run a query to retrieve this information as needed:\n\ndb.q(\"SELECT cats.*, hats.name_en hat_name, hats.price hat_price FROM cats JOIN hats\")[:2]\n\n[{'id': 0, 'hat_id': 6, 'hat_name': 'Top Hat', 'hat_price': 15.99},\n {'id': 0, 'hat_id': 6, 'hat_name': 'Baseball Cap', 'hat_price': 10.5}]",
+    "crumbs": [
+      "fastlite-migrations"
+    ]
+  },
+  {
+    "objectID": "index.html#developer-guide",
+    "href": "index.html#developer-guide",
+    "title": "fastlite-migrations",
+    "section": "Developer Guide",
+    "text": "Developer Guide\nIf you are new to using nbdev here are some useful pointers to get you started.\n\nInstall fastlite_migrations in Development mode\n# make sure fastlite_migrations package is installed in development mode\n$ pip install -e .\n\n# make changes under nbs/ directory\n# ...\n\n# compile to have changes apply to fastlite_migrations\n$ nbdev_prepare",
+    "crumbs": [
+      "fastlite-migrations"
+    ]
+  },
+  {
+    "objectID": "core.html",
+    "href": "core.html",
+    "title": "core",
+    "section": "",
+    "text": "db = database(\":memory:\")\nMigrator class adds a migrations table to your database that allows you to keep track of your database schema changes:\nsource",
+    "crumbs": [
+      "core"
+    ]
+  },
+  {
+    "objectID": "core.html#patch-database-directly",
+    "href": "core.html#patch-database-directly",
+    "title": "core",
+    "section": "Patch database directly",
+    "text": "Patch database directly\nFor simpler API, let’s patch add everything directly to database!\n\nsource\n\ndatabase\n\n database (path, wal=True)\n\n\ndb = database(\":memory:\")\n\n\n@db.add_migration(0)\ndef init_db(db): db.q(\"CREATE TABLE cats (name PRIMARY KEY)\")\n\n\ndb.migrate()\n\n0 init_db\n\n\n\ndb.rollback_migration()\n\nNo rollback for the latest applied migration found: Migrations(id=0, name='init_db', inserted_at='2025-03-09 19:23:08')",
+    "crumbs": [
+      "core"
+    ]
+  }
+]
