@@ -8,6 +8,7 @@ __all__ = ['Migrator', 'database']
 # %% ../nbs/00_core.ipynb 3
 from fastlite import *
 from apswutils.db import Database
+from fastcore.all import *
 import fastlite.kw
 
 # %% ../nbs/00_core.ipynb 6
@@ -42,25 +43,28 @@ def add_rollback(self: Migrator, rollback_id:int):
 # %% ../nbs/00_core.ipynb 10
 @patch
 def migrate(self: Migrator):
-    # TODO: make sure ids are in sequence
+    keys = sorted(self.migrations.keys())
+    assert keys[0] == 0 and keys[-1] == len(keys) - 1, "migration_ids must go like 0,1,2,..."
+
     for id, migration in sorted(self.migrations.items()):
         if id in self.db.t.migrations:
             continue
         print(id, migration.__name__)
-        self.db_migrations.insert(self.Migration(id=id, name=migration.__name__))
-        migration(self.db)
+        with self.db.conn:
+            self.db_migrations.insert(self.Migration(id=id, name=migration.__name__))
+            migration(self.db)
 
-# %% ../nbs/00_core.ipynb 11
+# %% ../nbs/00_core.ipynb 17
 @patch
 def last_applied_migration(self: Migrator):
     return self.db_migrations('id = (SELECT MAX(id) FROM migrations)')[0]
 
-# %% ../nbs/00_core.ipynb 12
+# %% ../nbs/00_core.ipynb 18
 @patch
 def applied_migrations(self: Migrator):
     return self.db_migrations()
 
-# %% ../nbs/00_core.ipynb 13
+# %% ../nbs/00_core.ipynb 19
 @patch
 def rollback(self: Migrator):
     latest_migration = self.last_applied_migration()
@@ -69,16 +73,17 @@ def rollback(self: Migrator):
         print(f"No rollback for the latest applied migration found: {latest_migration}")
         return
 
-    rollback = self.rollbacks[last_id]
-    print(last_id, rollback.__name__)
+    with self.db.conn:
+        rollback = self.rollbacks[last_id]
+        print(last_id, rollback.__name__)
 
-    rollback(self.db)
-    self.db_migrations.delete(last_id)
+        rollback(self.db)
+        self.db_migrations.delete(last_id)
 
-# %% ../nbs/00_core.ipynb 31
+# %% ../nbs/00_core.ipynb 40
 _orig_database = database
 
-# %% ../nbs/00_core.ipynb 32
+# %% ../nbs/00_core.ipynb 41
 def database(path, wal=True):
     db = _orig_database(path, wal)
     db.migrator = Migrator(db)
