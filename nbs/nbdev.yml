@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "fastlite-migrations"
+  site-url: "https://ozpau.github.io/fastlite-migrations"
+  description: "Simple migrations for fastlite"
+  repo-branch: main
+  repo-url: "https://github.com/ozpau/fastlite-migrations"
